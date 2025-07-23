@@ -259,14 +259,4 @@ curl -X POST http://localhost:5000/api/services/1/scale-up
 - Monitor network requests in the Network tab
 - Use the database studio for direct data inspection
 
-## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License.
