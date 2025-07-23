@@ -50,11 +50,11 @@ export default function Dashboard() {
 
   if (isLoading || !metrics) {
     return (
-      <div className="min-h-screen text-white" style={{ backgroundColor: 'hsl(var(--dashboard-bg))' }}>
-        <header className="border-b px-6 py-4" style={{ backgroundColor: 'hsl(var(--card-bg))', borderColor: 'hsl(var(--border-color))' }}>
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="border-b border-border bg-card px-6 py-4">
           <div className="flex items-center space-x-4">
-            <Group className="text-blue-500 h-6 w-6" />
-            <h1 className="text-xl font-bold">Microservice Dashboard</h1>
+            <Group className="text-primary h-6 w-6" />
+            <h1 className="text-xl font-bold text-foreground">Microservice Dashboard</h1>
             <div className="skeleton h-6 w-32 rounded-full"></div>
           </div>
         </header>
@@ -74,9 +74,9 @@ export default function Dashboard() {
   const systemStatus = metrics.systemOverview?.systemStatus || "healthy";
 
   return (
-    <div className="min-h-screen text-white font-inter" style={{ backgroundColor: 'hsl(var(--dashboard-bg))' }}>
+    <div className="min-h-screen bg-background text-foreground font-inter">
       {/* Header */}
-      <header className="border-b px-6 py-4" style={{ backgroundColor: 'hsl(var(--card-bg))', borderColor: 'hsl(var(--border-color))' }}>
+      <header className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
@@ -118,7 +118,7 @@ export default function Dashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 border-r min-h-screen p-4" style={{ backgroundColor: 'hsl(var(--card-bg))', borderColor: 'hsl(var(--border-color))' }}>
+        <aside className="w-64 border-r border-border bg-card min-h-screen p-4">
           <nav className="space-y-2">
             <a href="#overview" className="flex items-center space-x-3 px-3 py-2 bg-blue-600 rounded-lg text-white">
               <span>📊</span>
@@ -148,7 +148,7 @@ export default function Dashboard() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 bg-background">
           {/* System Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <MetricCard
