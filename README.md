@@ -1,6 +1,9 @@
 # Distributed Systems Monitoring Dashboard
 
 A comprehensive microservice monitoring system that demonstrates scalability and resilience patterns including load balancing, circuit breakers, horizontal scaling, data sharding, and failure simulation.
+<img width="1785" height="853" alt="Screenshot from 2025-07-23 17-08-44" src="https://github.com/user-attachments/assets/4c67ef36-70fc-46bf-81e5-3842c4b8b8c5" />
+<img width="1785" height="853" alt="Screenshot from 2025-07-23 17-08-39" src="https://github.com/user-attachments/assets/85e6357e-e337-498a-9df7-7007c1385e2b" />
+<img width="1785" height="853" alt="Screenshot from 2025-07-23 17-08-28" src="https://github.com/user-attachments/assets/53b7b478-a41e-41c4-92f5-2f9ab207bae5" />
 
 ## 🚀 Quick Start
 
