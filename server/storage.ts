@@ -8,6 +8,8 @@ import {
   type Log, type InsertLog,
   type LoadTest, type InsertLoadTest
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -338,4 +340,253 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async initializeData() {
+    // Check if data already exists
+    const existingServices = await this.getAllServices();
+    if (existingServices.length > 0) {
+      return; // Data already initialized
+    }
+
+    // Initialize services
+    const sampleServices = [
+      { name: "api-service-1", url: "http://localhost:3001", status: "healthy" as const, instanceCount: 3, load: 23 },
+      { name: "api-service-2", url: "http://localhost:3002", status: "healthy" as const, instanceCount: 3, load: 31 },
+      { name: "api-service-3", url: "http://localhost:3003", status: "degraded" as const, instanceCount: 3, load: 78 },
+      { name: "payment-service", url: "http://localhost:3004", status: "healthy" as const, instanceCount: 2, load: 45 },
+      { name: "user-service", url: "http://localhost:3005", status: "healthy" as const, instanceCount: 2, load: 67 },
+      { name: "external-api", url: "http://external-api.com", status: "unhealthy" as const, instanceCount: 1, load: 0 },
+    ];
+
+    for (const service of sampleServices) {
+      await this.createService(service);
+    }
+
+    // Initialize circuit breakers
+    const sampleCircuitBreakers = [
+      { serviceName: "payment-service", state: "CLOSED" as const, failureCount: 0, failureThreshold: 5, timeout: 60000 },
+      { serviceName: "external-api", state: "OPEN" as const, failureCount: 52, failureThreshold: 50, lastFailure: new Date(), timeout: 60000 },
+      { serviceName: "user-service", state: "HALF_OPEN" as const, failureCount: 3, failureThreshold: 5, lastFailure: new Date(), timeout: 60000 },
+    ];
+
+    for (const cb of sampleCircuitBreakers) {
+      await this.createCircuitBreaker(cb);
+    }
+
+    // Initialize shards
+    const sampleShards = [
+      { name: "Shard 1", range: "A-H", load: 67, status: "healthy" as const, recordCount: 10000 },
+      { name: "Shard 2", range: "I-P", load: 84, status: "degraded" as const, recordCount: 12000 },
+      { name: "Shard 3", range: "Q-Z", load: 52, status: "healthy" as const, recordCount: 8000 },
+    ];
+
+    for (const shard of sampleShards) {
+      await this.createShard(shard);
+    }
+  }
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  // Service methods
+  async getAllServices(): Promise<Service[]> {
+    return await db.select().from(services);
+  }
+
+  async getService(id: number): Promise<Service | undefined> {
+    const [service] = await db.select().from(services).where(eq(services.id, id));
+    return service || undefined;
+  }
+
+  async getServiceByName(name: string): Promise<Service | undefined> {
+    const [service] = await db.select().from(services).where(eq(services.name, name));
+    return service || undefined;
+  }
+
+  async createService(insertService: InsertService): Promise<Service> {
+    const [service] = await db
+      .insert(services)
+      .values({
+        ...insertService,
+        lastHealthCheck: new Date()
+      })
+      .returning();
+    return service;
+  }
+
+  async updateService(id: number, updates: Partial<InsertService>): Promise<Service | undefined> {
+    const [service] = await db
+      .update(services)
+      .set({
+        ...updates,
+        lastHealthCheck: new Date()
+      })
+      .where(eq(services.id, id))
+      .returning();
+    return service || undefined;
+  }
+
+  async deleteService(id: number): Promise<boolean> {
+    const result = await db.delete(services).where(eq(services.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Circuit breaker methods
+  async getAllCircuitBreakers(): Promise<CircuitBreaker[]> {
+    return await db.select().from(circuitBreakers);
+  }
+
+  async getCircuitBreaker(serviceName: string): Promise<CircuitBreaker | undefined> {
+    const [circuitBreaker] = await db
+      .select()
+      .from(circuitBreakers)
+      .where(eq(circuitBreakers.serviceName, serviceName));
+    return circuitBreaker || undefined;
+  }
+
+  async createCircuitBreaker(insertCircuitBreaker: InsertCircuitBreaker): Promise<CircuitBreaker> {
+    const [circuitBreaker] = await db
+      .insert(circuitBreakers)
+      .values(insertCircuitBreaker)
+      .returning();
+    return circuitBreaker;
+  }
+
+  async updateCircuitBreaker(serviceName: string, updates: Partial<CircuitBreaker>): Promise<CircuitBreaker | undefined> {
+    const [circuitBreaker] = await db
+      .update(circuitBreakers)
+      .set(updates)
+      .where(eq(circuitBreakers.serviceName, serviceName))
+      .returning();
+    return circuitBreaker || undefined;
+  }
+
+  // Metrics methods
+  async getRecentMetrics(serviceName?: string, limit: number = 100): Promise<Metric[]> {
+    if (serviceName) {
+      return await db
+        .select()
+        .from(metrics)
+        .where(eq(metrics.serviceName, serviceName))
+        .orderBy(desc(metrics.timestamp))
+        .limit(limit);
+    }
+    
+    return await db
+      .select()
+      .from(metrics)
+      .orderBy(desc(metrics.timestamp))
+      .limit(limit);
+  }
+
+  async createMetric(insertMetric: InsertMetric): Promise<Metric> {
+    const [metric] = await db
+      .insert(metrics)
+      .values({
+        ...insertMetric,
+        timestamp: new Date()
+      })
+      .returning();
+    return metric;
+  }
+
+  // Shard methods
+  async getAllShards(): Promise<Shard[]> {
+    return await db.select().from(shards);
+  }
+
+  async getShard(id: number): Promise<Shard | undefined> {
+    const [shard] = await db.select().from(shards).where(eq(shards.id, id));
+    return shard || undefined;
+  }
+
+  async createShard(insertShard: InsertShard): Promise<Shard> {
+    const [shard] = await db
+      .insert(shards)
+      .values(insertShard)
+      .returning();
+    return shard;
+  }
+
+  async updateShard(id: number, updates: Partial<InsertShard>): Promise<Shard | undefined> {
+    const [shard] = await db
+      .update(shards)
+      .set(updates)
+      .where(eq(shards.id, id))
+      .returning();
+    return shard || undefined;
+  }
+
+  // Log methods
+  async getRecentLogs(limit: number = 50): Promise<Log[]> {
+    return await db
+      .select()
+      .from(logs)
+      .orderBy(desc(logs.timestamp))
+      .limit(limit);
+  }
+
+  async createLog(insertLog: InsertLog): Promise<Log> {
+    const [log] = await db
+      .insert(logs)
+      .values({
+        ...insertLog,
+        timestamp: new Date()
+      })
+      .returning();
+    return log;
+  }
+
+  async clearLogs(): Promise<boolean> {
+    await db.delete(logs);
+    return true;
+  }
+
+  // Load test methods
+  async getCurrentLoadTest(): Promise<LoadTest | undefined> {
+    const [loadTest] = await db
+      .select()
+      .from(loadTests)
+      .where(eq(loadTests.status, "running"))
+      .limit(1);
+    return loadTest || undefined;
+  }
+
+  async createLoadTest(insertLoadTest: InsertLoadTest): Promise<LoadTest> {
+    const [loadTest] = await db
+      .insert(loadTests)
+      .values(insertLoadTest)
+      .returning();
+    return loadTest;
+  }
+
+  async updateLoadTest(id: number, updates: Partial<LoadTest>): Promise<LoadTest | undefined> {
+    const [loadTest] = await db
+      .update(loadTests)
+      .set(updates)
+      .where(eq(loadTests.id, id))
+      .returning();
+    return loadTest || undefined;
+  }
+}
+
+// Use DatabaseStorage instead of MemStorage
+export const storage = new DatabaseStorage();
+
+// Initialize database with sample data
+storage.initializeData().catch(console.error);
